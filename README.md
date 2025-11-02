@@ -115,12 +115,16 @@ Or pass environment variables when running:
 $env:BASE_URL = 'https://api.staging.example.com'; k6 run script.js
 ```
 
-Troubleshooting & common gotchas
---------------------------------
+-----------------------------------------------------------------------
+Screenshot of the K6-Generator
 
-- Buttons not responding: open the browser DevTools console (F12) and check for errors. The UI relies on `script.js` event listeners and the Monaco loader; if the page fails to load Monaco from CDN the editor code path may early-exit.
-- Monaco blocked/offline: the app has a fallback editor; refresh after fixing connectivity.
-- Generated script doesn't work: compare endpoint paths and payloads against your API contract. The generator uses the values provided in the UI — validate headers and body format.
+<img width="1917" height="881" alt="image" src="https://github.com/user-attachments/assets/ccf7482e-b203-4d62-96ff-85e4815a4e61" />
+
+
+<img width="1912" height="878" alt="image" src="https://github.com/user-attachments/assets/6ec5b048-b49a-409b-91b3-79e02a34a11c" />
+
+
+
 
 Contributing
 ------------
