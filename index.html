@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K6 Performance Test Script Generator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 K6 Performance Test Script Generator</h1>
+            <p>Professional-grade performance testing without manual scripting</p>
+            <div class="theme-toggle">
+                <button id="themeToggle" aria-label="Toggle theme">🌙</button>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Left Panel: Configuration -->
+            <div class="config-panel">
+                <div class="panel-scroll">
+
+                    <!-- General Configuration -->
+                    <section class="config-section">
+                        <h2 class="section-header" onclick="toggleSection('general')">
+                            <span class="toggle-icon">▼</span> ⚙️ General Configuration
+                        </h2>
+                        <div id="section-general" class="section-content">
+                            <div class="form-group">
+                                <label for="testName">Test Name / API Suite Name</label>
+                                <input type="text" id="testName" placeholder="e.g., User API Performance Test" value="My Performance Test">
+                            </div>
+                            <div class="form-group">
+                                <label for="baseUrl">Base URL (Optional)</label>
+                                <input type="text" id="baseUrl" placeholder="e.g., https://api.example.com or use ${BASE_URL}" value="">
+                                <small>Use environment variable: ${BASE_URL}</small>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Environment Variables - NEW -->
+                    <section class="config-section">
+                        <h2 class="section-header" onclick="toggleSection('envvars')">
+                            <span class="toggle-icon">▼</span> 🔐 Environment Variables
+                        </h2>
+                        <div id="section-envvars" class="section-content">
+                            <div class="form-group">
+                                <label>Environment Profile</label>
+                                <div class="profile-selector">
+                                    <button type="button" class="profile-btn active" data-profile="dev">Development</button>
+                                    <button type="button" class="profile-btn" data-profile="staging">Staging</button>
+                                    <button type="button" class="profile-btn" data-profile="prod">Production</button>
+                                </div>
+                            </div>
+                            <button type="button" id="addEnvVarBtn" class="btn btn-secondary btn-sm">+ Add Variable</button>
+                            <div id="envVarsList" class="env-vars-list"></div>
+                            <small style="display: block; margin-top: 0.5rem; color: var(--text-secondary);">
+                                Variables can be used in URLs, headers, and body as ${VAR_NAME}
+                            </small>
+                        </div>
+                    </section>
+
+                    <!-- Load Profile -->
+                    <section class="config-section">
+                        <h2 class="section-header" onclick="toggleSection('load')">
+                            <span class="toggle-icon">▼</span> 📊 Load Profile
+                        </h2>
+                        <div id="section-load" class="section-content">
+                            <div class="form-group">
+                                <label for="loadType">Load Type</label>
+                                <select id="loadType">
+                                    <option value="constant">Constant Load</option>
+                                    <option value="ramping-up">Ramping Up</option>
+                                    <option value="ramping-down">Ramping Down</option>
+                                    <option value="spike">Spike Load</option>
+                                    <option value="stages">Custom Stages (Manual)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="vus">Virtual Users (VUs)</label>
+                                    <input type="number" id="vus" min="1" value="10">
+                                </div>
+                                <div class="form-group">
+                                    <label for="duration">Test Duration</label>
+                                    <input type="text" id="duration" placeholder="e.g., 30s, 2m, 5m" value="30s">
+                                </div>
+                            </div>
+
+                            <div id="simpleRampingConfig" class="ramping-config hidden">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="rampDuration">Ramp Duration</label>
+                                        <input type="text" id="rampDuration" placeholder="e.g., 1m" value="1m">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="targetVUs">Target VUs</label>
+                                        <input type="number" id="targetVUs" min="1" value="50">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="manualStagesConfig" class="stages-config hidden">
+                                <h4 style="margin: 1rem 0 0.5rem 0; font-size: 0.95rem;">Configure Stages Manually</h4>
+                                <button type="button" id="addStageBtn" class="btn btn-secondary btn-sm">+ Add Stage</button>
+                                <div id="stagesList" class="stages-list"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Scenarios & Executors - NEW -->
+                    <section class="config-section">
+                        <h2 class="section-header" onclick="toggleSection('scenarios')">
+                            <span class="toggle-icon">▼</span> 🎬 Scenarios & Executors
+                        </h2>
+                        <div id="section-scenarios" class="section-content">
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="enableScenarios">
+                                    Enable Advanced Scenarios (recommended for complex tests)
+                                </label>
+                            </div>
+                            <div id="scenariosConfig" class="hidden">
+                                <button type="button" id="addScenarioBtn" class="btn btn-secondary btn-sm">+ Add Scenario</button>
+                                <div id="scenariosList" class="scenarios-list"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Execution Strategy -->
+                    <section class="config-section">
+                        <h2 class="section-header" onclick="toggleSection('execution')">
+                            <span class="toggle-icon">▼</span> 🔄 Execution Strategy
+                        </h2>
+                        <div id="section-execution" class="section-content">
+                            <div class="form-group">
+                                <label for="executionMode">Execution Mode</label>
+                                <select id="executionMode">
+                                    <option value="sequential">Sequential (One after another)</option>
+                                    <option value="parallel">Parallel (All APIs together)</option>
+                                    <option value="random">Randomized (Pick one randomly)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Think Time Control - NEW -->
+                    <section class="config-section">
+                        <h2 class="section-header" onclick="toggleSection('thinktime')">
+                            <span class="toggle-icon">▼</span> ⏱️ Think Time Control
+                        </h2>
+                        <div id="section-thinktime" class="section-content">
+                            <div class="form-group">
+                                <label for="thinkTimeMode">Think Time Mode</label>
+                                <select id="thinkTimeMode">
+                                    <option value="fixed">Fixed Duration</option>
+                                    <option value="random">Random Range</option>
+                                    <option value="per-api">Per-API Custom</option>
+                                </select>
+                            </div>
+                            <div id="fixedThinkTimeConfig">
+                                <div class="form-group">
+                                    <label for="fixedThinkTime">Fixed Think Time (seconds)</label>
+                                    <input type="number" id="fixedThinkTime" min="0" step="0.1" value="1">
+                                </div>
+                            </div>
+                            <div id="randomThinkTimeConfig" class="hidden">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="minThinkTime">Min (seconds)</label>
+                                        <input type="number" id="minThinkTime" min="0" step="0.1" value="1">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="maxThinkTime">Max (seconds)</label>
+                                        <input type="number" id="maxThinkTime" min="0" step="0.1" value="5">
+                                    </div>
+                                </div>
+                            </div>
+                            <small style="display: block; margin-top: 0.5rem; color: var(--text-secondary);">
+                                Think time simulates user pause between actions. Per-API mode allows custom wait per request.
+                            </small>
+                        </div>
+                    </section>
+
+                    <!-- Thresholds -->
+                    <section class="config-section">
+                        <h2 class="section-header" onclick="toggleSection('thresholds')">
+                            <span class="toggle-icon">▼</span> 📈 Performance Thresholds
+                        </h2>
+                        <div id="section-thresholds" class="section-content">
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="enableThresholds" checked>
+                                    Enable Thresholds
+                                </label>
+                            </div>
+                            <div id="thresholdConfig">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="p95Threshold">P95 Response Time (ms)</label>
+                                        <input type="number" id="p95Threshold" min="0" value="500">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="p99Threshold">P99 Response Time (ms)</label>
+                                        <input type="number" id="p99Threshold" min="0" value="1000">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="errorRate">Max Error Rate (%)</label>
+                                    <input type="number" id="errorRate" min="0" max="100" step="0.1" value="1">
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- API Details -->
+                    <section class="config-section">
+                        <h2 class="section-header" onclick="toggleSection('apis')">
+                            <span class="toggle-icon">▼</span> 🌐 API Requests
+                        </h2>
+                        <div id="section-apis" class="section-content">
+                            <button type="button" id="addApiBtn" class="btn btn-primary">+ Add API Request</button>
+                            <div id="apiList" class="api-list"></div>
+                        </div>
+                    </section>
+
+                    <!-- Action Buttons -->
+                    <div class="action-buttons">
+                        <button type="button" id="generateBtn" class="btn btn-success">⚡ Generate K6 Script</button>
+                        <button type="button" id="loadTemplateBtn" class="btn btn-secondary">📋 Load Example</button>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <button type="button" id="exportConfigBtn" class="btn btn-secondary">📤 Export</button>
+                            <button type="button" id="importConfigBtn" class="btn btn-secondary">📥 Import</button>
+                        </div>
+                        <input type="file" id="configFileInput" accept=".json" style="display: none;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Code Preview -->
+            <div class="preview-panel">
+                <div class="preview-header">
+                    <h2>📝 Generated K6 Script</h2>
+                    <div class="preview-actions">
+                        <button id="copyBtn" class="btn btn-icon" title="Copy to Clipboard">📋 Copy</button>
+                        <button id="downloadBtn" class="btn btn-icon" title="Download Script">💾 Download</button>
+                    </div>
+                </div>
+                <div id="codeEditor" class="code-editor"></div>
+                <div class="preview-footer">
+                    <span class="footer-text">
+                        Run with: <code>k6 run script.js</code> or 
+                        <code>k6 run script.js -e BASE_URL=https://api.example.com</code>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
