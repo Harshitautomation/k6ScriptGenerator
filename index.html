@@ -81,11 +81,11 @@
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="vus">Virtual Users (VUs)</label>
-                                    <input type="number" id="vus" min="1" value="10">
+                                    <input type="number" id="vus" min="1" value="10" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="duration">Test Duration</label>
-                                    <input type="text" id="duration" placeholder="e.g., 30s, 2m, 5m" value="30s">
+                                    <input type="text" id="duration" placeholder="e.g., 30s, 2m, 5m" value="30s" required>
                                 </div>
                             </div>
 
@@ -221,7 +221,10 @@
                             <span class="toggle-icon">▼</span> 🌐 API Requests
                         </h2>
                         <div id="section-apis" class="section-content">
-                            <button type="button" id="addApiBtn" class="btn btn-primary">+ Add API Request</button>
+                            <div style="display:flex;gap:0.5rem;align-items:center;">
+                                <button type="button" id="addApiBtn" class="btn btn-primary">+ Add API Request</button>
+                                <button type="button" id="importCurlBtn" class="btn btn-secondary">⬇️ Import cURL</button>
+                            </div>
                             <div id="apiList" class="api-list"></div>
                         </div>
                     </section>
@@ -261,5 +264,17 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
     <script src="script.js"></script>
+    <!-- cURL Import Modal -->
+    <div id="curlModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="curlModalTitle">
+        <div class="modal-content">
+            <h3 id="curlModalTitle">Import cURL Command</h3>
+            <textarea id="curlInput" placeholder="Paste cURL command here" style="width:100%;height:120px;font-family:monospace;padding:8px;"></textarea>
+            <div style="display:flex;gap:0.5rem;margin-top:0.5rem;justify-content:flex-end;">
+                <button id="curlCancelBtn" class="btn btn-secondary">Cancel</button>
+                <button id="curlParseBtn" class="btn btn-primary">Import</button>
+            </div>
+            <div id="curlError" style="color:var(--danger-color);margin-top:0.5rem;display:none;"></div>
+        </div>
+    </div>
 </body>
 </html>
