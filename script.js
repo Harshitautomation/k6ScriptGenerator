@@ -148,6 +148,35 @@ function initEventListeners() {
     const addApiBtn = document.getElementById('addApiBtn');
     if (addApiBtn) addApiBtn.addEventListener('click', () => { console.log('Adding API...'); addApiItem(); });
 
+    // cURL import
+    const importCurlBtn = document.getElementById('importCurlBtn');
+    if (importCurlBtn) importCurlBtn.addEventListener('click', () => {
+        const modal = document.getElementById('curlModal');
+        if (modal) modal.classList.remove('hidden');
+        const curlInput = document.getElementById('curlInput');
+        if (curlInput) curlInput.value = '';
+        const curlError = document.getElementById('curlError');
+        if (curlError) { curlError.style.display = 'none'; curlError.textContent = ''; }
+    });
+
+    const curlCancelBtn = document.getElementById('curlCancelBtn');
+    if (curlCancelBtn) curlCancelBtn.addEventListener('click', () => document.getElementById('curlModal').classList.add('hidden'));
+
+    const curlParseBtn = document.getElementById('curlParseBtn');
+    if (curlParseBtn) curlParseBtn.addEventListener('click', () => {
+        const curlText = document.getElementById('curlInput').value || '';
+        const curlError = document.getElementById('curlError');
+        try {
+            const api = parseCurlToApi(curlText);
+            // Close modal
+            document.getElementById('curlModal').classList.add('hidden');
+            // Add prefilled API item
+            addApiItem(api);
+        } catch (err) {
+            if (curlError) { curlError.style.display = 'block'; curlError.textContent = err.message || 'Failed to parse cURL'; }
+        }
+    });
+
     const addStageBtn = document.getElementById('addStageBtn');
     if (addStageBtn) addStageBtn.addEventListener('click', addStageItem);
 
@@ -158,7 +187,36 @@ function initEventListeners() {
     if (addEnvVarBtn) addEnvVarBtn.addEventListener('click', addEnvVarItem);
 
     const generateBtn = document.getElementById('generateBtn');
-    if (generateBtn) generateBtn.addEventListener('click', () => { console.log('Generating...'); generateScript(); });
+    if (generateBtn) generateBtn.addEventListener('click', () => {
+        // Form validation before generating script
+        const apiItems = document.querySelectorAll('.api-item');
+        const vusInput = document.getElementById('vus');
+        const durationInput = document.getElementById('duration');
+        let errors = [];
+        if (apiItems.length === 0) {
+            errors.push('At least one API request must be added.');
+        }
+        if (!vusInput.value || isNaN(vusInput.value) || parseInt(vusInput.value) < 1) {
+            errors.push('Virtual Users (VUs) must be defined and greater than 0.');
+        }
+        if (!durationInput.value || durationInput.value.trim() === '') {
+            errors.push('Test Duration must be defined.');
+        }
+        // Remove previous error
+        let prevError = document.getElementById('formValidationError');
+        if (prevError) prevError.remove();
+        if (errors.length > 0) {
+            // Show error above the Generate button
+            const errorDiv = document.createElement('div');
+            errorDiv.id = 'formValidationError';
+            errorDiv.style.cssText = 'color: var(--danger-color); background: var(--bg-tertiary); padding: 0.8rem; border-radius: 6px; margin-bottom: 1rem; text-align: center;';
+            errorDiv.innerHTML = '⚠️ ' + errors.join('<br>');
+            generateBtn.parentElement.insertBefore(errorDiv, generateBtn);
+            return;
+        }
+        console.log('Generating...');
+        generateScript();
+    });
 
     const copyBtn = document.getElementById('copyBtn');
     if (copyBtn) copyBtn.addEventListener('click', copyToClipboard);
@@ -236,8 +294,14 @@ function handleThinkTimeModeChange() {
 
     if (mode === 'fixed') {
         fixedConfig.classList.remove('hidden');
+        // hide per-api inputs
+        document.querySelectorAll('.api-thinktime-section').forEach(el => el.style.display = 'none');
     } else if (mode === 'random') {
         randomConfig.classList.remove('hidden');
+        document.querySelectorAll('.api-thinktime-section').forEach(el => el.style.display = 'none');
+    } else if (mode === 'per-api') {
+        // show per-api inputs
+        document.querySelectorAll('.api-thinktime-section').forEach(el => el.style.display = 'block');
     }
 }
 
@@ -374,7 +438,7 @@ function removeScenarioItem(id) {
     if (item) item.remove();
 }
 
-function addApiItem() {
+function addApiItem(initialData = null) {
     apiCounter++;
     console.log('Creating API item #' + apiCounter);
     const apiList = document.getElementById('apiList');
@@ -419,6 +483,12 @@ function addApiItem() {
         <div class="form-group">
             <label>Request Body (JSON)</label>
             <textarea class="api-body" placeholder='{"key": "value"} or use variables: {"token": "\${authToken}"}'></textarea>
+        </div>
+
+        <div class="api-thinktime-section" style="margin-top:0.8rem; display: none;">
+            <label>Per-API Think Time (seconds)</label>
+            <input type="number" class="api-thinktime" min="0" step="0.1" value="0" placeholder="e.g., 1.5">
+            <small style="display:block;margin-top:0.3rem;color:var(--text-secondary);">Used when Think Time Mode = Per-API</small>
         </div>
 
         <div class="chaining-section">
@@ -477,7 +547,193 @@ function addApiItem() {
 
     addCheck(apiCounter);
 
+    // If initialData provided, prefill fields
+    if (initialData) {
+        try {
+            if (initialData.name) apiItem.querySelector('.api-name').value = initialData.name;
+            if (initialData.method) apiItem.querySelector('.api-method').value = initialData.method;
+            if (initialData.url) apiItem.querySelector('.api-url').value = initialData.url;
+            if (initialData.body) apiItem.querySelector('.api-body').value = initialData.body;
+            if (initialData.headers && initialData.headers.length) {
+                // clear default headers if any
+                const headersList = apiItem.querySelector('.headers-list');
+                headersList.innerHTML = '';
+                initialData.headers.forEach(h => {
+                    const headerItem = document.createElement('div');
+                    headerItem.className = 'header-row';
+                    headerItem.innerHTML = `
+                        <div class="header-inputs">
+                            <input type="text" placeholder="Header Key" class="header-key" value="${h.key}">
+                            <input type="text" placeholder="Header Value (can use \${VAR})" class="header-value" value="${h.value}">
+                        </div>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">×</button>
+                    `;
+                    headersList.appendChild(headerItem);
+                });
+            }
+                // Handle basic auth mapping from curl --user
+                if (initialData.auth && initialData.auth.type === 'basic') {
+                    try {
+                        const authSelect = apiItem.querySelector('.auth-type');
+                        if (authSelect) {
+                            authSelect.value = 'basic';
+                            handleAuthTypeChange(apiCounter, 'basic');
+                            setTimeout(() => {
+                                const usernameInput = apiItem.querySelector('.basic-username');
+                                const passwordInput = apiItem.querySelector('.basic-password');
+                                if (usernameInput) usernameInput.value = initialData.auth.username || '';
+                                if (passwordInput) passwordInput.value = initialData.auth.password || '';
+                            }, 50);
+                        }
+                    } catch (e) { /* ignore */ }
+                }
+
+                // Handle form entries (converted to body in parser) - prefill body and content-type if present
+                if (initialData.form) {
+                    try {
+                        if (initialData.body) {
+                            apiItem.querySelector('.api-body').value = initialData.body;
+                        }
+                        // ensure Content-Type header is present if parser added it
+                        const hasContentType = initialData.headers && initialData.headers.some(h => h.key && h.key.toLowerCase() === 'content-type');
+                        if (!hasContentType && initialData.form.hasFile) {
+                            addHeader(apiCounter);
+                            setTimeout(() => {
+                                const headerRow = apiItem.querySelector('.header-row');
+                                if (headerRow) {
+                                    headerRow.querySelector('.header-key').value = 'Content-Type';
+                                    headerRow.querySelector('.header-value').value = 'multipart/form-data';
+                                }
+                            }, 50);
+                        }
+                    } catch (e) { /* ignore */ }
+                }
+        } catch (e) {
+            console.warn('Failed to prefill API item', e);
+        }
+    }
+
     console.log('✅ API item #' + apiCounter + ' added successfully');
+}
+
+// Parse a cURL command string into an API object compatible with addApiItem
+function parseCurlToApi(curlText) {
+    if (!curlText || curlText.trim() === '') throw new Error('Empty cURL input');
+    // Normalize line continuations and remove leading/trailing spaces
+    let s = curlText.replace(/\\\n/g, ' ').trim();
+    // Basic check
+    if (!s.startsWith('curl')) throw new Error('Not a cURL command');
+
+    // Extract method
+    let method = 'GET';
+    const methodMatch = s.match(/--request\s+(GET|POST|PUT|DELETE|PATCH)/i);
+    if (methodMatch) method = methodMatch[1].toUpperCase();
+
+    // Extract URL (single or double quoted)
+    let url = '';
+    const urlMatch = s.match(/(?:'|")([^'"]+)(?:'|")/);
+    if (urlMatch) {
+        // first quoted string after curl and --request may be the URL
+        // try to find the token that looks like http
+        const allQuoted = Array.from(s.matchAll(/(?:'|")([^'"]+)(?:'|")/g)).map(m => m[1]);
+        const httpUrl = allQuoted.find(u => u.startsWith('http'));
+        if (httpUrl) url = httpUrl;
+        else url = allQuoted[0] || '';
+    } else {
+        // fallback: find token after --request or curl
+        const parts = s.split(/\s+/);
+        const httpPart = parts.find(p => p.startsWith('http'));
+        if (httpPart) url = httpPart.replace(/['"]/g, '');
+    }
+
+    // Extract headers (support single or double quoted header values, and multi-line)
+    const headers = [];
+    const headerRegex = /--header\s+(['"])([\s\S]*?):\s*([\s\S]*?)\1/g;
+    let hm;
+    while ((hm = headerRegex.exec(curlText)) !== null) {
+        headers.push({ key: hm[2].trim(), value: hm[3].trim() });
+    }
+
+    // Extract --user (basic auth)
+    let auth = null;
+    const userRegex = /(?:--user|-u)\s+(['"])?([\s\S]*?):([\s\S]*?)\1?(?:\s|$)/;
+    const userMatch = curlText.match(userRegex);
+    if (userMatch) {
+        auth = { type: 'basic', username: userMatch[2], password: userMatch[3] };
+    }
+
+    // Extract data/body (support multi-line JSON inside single/double quotes)
+    let body = '';
+    const dataRegex = /--data-raw\s+(['"])([\s\S]*?)\1/i;
+    const dataMatch = curlText.match(dataRegex);
+    if (dataMatch) {
+        body = dataMatch[2];
+    } else {
+        const dataRegex2 = /--data\s+(['"])([\s\S]*?)\1/i;
+        const dataMatch2 = curlText.match(dataRegex2);
+        if (dataMatch2) body = dataMatch2[2];
+    }
+
+    // Trim potential leading/trailing whitespace
+    if (typeof body === 'string') body = body.trim();
+
+    // Extract --form entries (multipart/form-data or form-urlencoded)
+    const formEntries = [];
+    const formRegex = /--form\s+(['"])([\s\S]*?)\1/g;
+    let fm;
+    let hasForm = false;
+    let hasFile = false;
+    while ((fm = formRegex.exec(curlText)) !== null) {
+        hasForm = true;
+        const entry = fm[2];
+        // entry like name=value or name=@filename or name="value"
+        const eqIdx = entry.indexOf('=');
+        if (eqIdx > -1) {
+            const key = entry.substring(0, eqIdx).trim();
+            let val = entry.substring(eqIdx + 1).trim();
+            if (val.startsWith('@')) {
+                hasFile = true;
+                // store filename placeholder
+                val = val.substring(1);
+            }
+            // remove surrounding quotes if present
+            if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+                val = val.substring(1, val.length - 1);
+            }
+            formEntries.push({ key, value: val, isFile: hasFile });
+        }
+    }
+
+    // If form entries exist and no explicit --data/body, convert to body accordingly
+    if (hasForm && (!body || body === '')) {
+        if (!hasFile) {
+            // form-urlencoded
+            const urlEncoded = formEntries.map(e => encodeURIComponent(e.key) + '=' + encodeURIComponent(e.value)).join('&');
+            body = urlEncoded;
+            // set header if not present
+            if (!headers.some(h => h.key.toLowerCase() === 'content-type')) {
+                headers.push({ key: 'Content-Type', value: 'application/x-www-form-urlencoded' });
+            }
+        } else {
+            // multipart with file(s) - create a placeholder representation
+            const parts = formEntries.map(e => e.isFile ? `${e.key}=@${e.value}` : `${e.key}=${e.value}`);
+            body = parts.join('&');
+            if (!headers.some(h => h.key.toLowerCase() === 'content-type')) {
+                headers.push({ key: 'Content-Type', value: 'multipart/form-data' });
+            }
+        }
+    }
+
+    const result = {
+        name: `Imported from cURL`,
+        method,
+        url,
+        headers,
+        body: body || ''
+    };
+    if (auth) result.auth = auth;
+    if (hasForm) result.form = { entries: formEntries, hasFile };
+    return result;
 }
 
 function removeApiItem(id) {
@@ -619,6 +875,7 @@ function generateScript() {
             method: item.querySelector('.api-method')?.value || 'GET',
             url: item.querySelector('.api-url')?.value || '',
             body: item.querySelector('.api-body')?.value || '',
+            thinkTime: parseFloat(item.querySelector('.api-thinktime')?.value) || 0,
             authType: item.querySelector('.auth-type')?.value || 'none',
             headers: [],
             checks: [],
@@ -663,6 +920,11 @@ function generateScript() {
 
 function buildK6Script(cfg) {
     let script = `/*\n * ${cfg.testName}\n * Generated by K6 Script Generator (Advanced)\n * Date: ${new Date().toLocaleString()}\n */\n\n`;
+
+    // Add warning if API list is empty
+    if (!cfg.apis || cfg.apis.length === 0) {
+        script += `/**\n * ⚠️ WARNING: No API requests configured!\n * Please add at least one API request in the UI to generate a valid K6 script.\n */\n\n`;
+    }
 
     script += `import http from 'k6/http';\n`;
     script += `import { check, group, sleep } from 'k6';\n\n`;
@@ -877,10 +1139,15 @@ function generateApiCall(api, index, baseUrl, thinkTime, indent = '  ') {
     if (headerEntries.length > 0) {
         code += `\n`;
         headerEntries.forEach(([key, value], idx) => {
+            // escape single quotes in plain header values
+            const escSingle = (v) => v.replace(/'/g, "\\'");
+            const escBacktick = (v) => v.replace(/`/g, '\\`').replace(/\\/g, '\\\\');
             if (value.includes('\${')) {
-                code += `${indent}    '${key}': \`${value}\`${idx < headerEntries.length - 1 ? ',' : ''}\n`;
+                const safe = escBacktick(value);
+                code += `${indent}    '${key}': \`${safe}\`${idx < headerEntries.length - 1 ? ',' : ''}\n`;
             } else {
-                code += `${indent}    '${key}': '${value}'${idx < headerEntries.length - 1 ? ',' : ''}\n`;
+                const safe = escSingle(value);
+                code += `${indent}    '${key}': '${safe}'${idx < headerEntries.length - 1 ? ',' : ''}\n`;
             }
         });
         code += `${indent}  `;
@@ -901,15 +1168,18 @@ function generateApiCall(api, index, baseUrl, thinkTime, indent = '  ') {
     if (['GET', 'DELETE'].includes(api.method)) {
         code += `${indent}  const res = http.${api.method.toLowerCase()}(\`${fullUrl}\`, params);\n`;
     } else {
-        const body = api.body || '{}';
-        // Handle variables in body
-        if (body.includes('${') && body.includes('}')) {
-            let processedBody = body.replace(/\$\{([a-z][a-zA-Z0-9_]*)\}/g, '\${extractedVars.$1}');
+        const body = api.body || '';
+        // Handle variables in body (lowercase -> extractedVars, uppercase -> env vars)
+        let processedBody = body;
+        try {
+            processedBody = processedBody.replace(/\$\{([a-z][a-zA-Z0-9_]*)\}/g, '\${extractedVars.$1}');
             processedBody = processedBody.replace(/\$\{([A-Z_][A-Z0-9_]*)\}/g, '\${$1}');
-            code += `${indent}  const payload = \`${processedBody}\`;\n`;
-        } else {
-            code += `${indent}  const payload = '${body}';\n`;
+        } catch (e) {
+            // ignore
         }
+        // Escape backticks and backslashes so template literal in generated script is safe
+        const safeBody = String(processedBody).replace(/\\/g, '\\\\').replace(/`/g, '\\`');
+        code += `${indent}  const payload = \`${safeBody}\`;\n`;
         code += `${indent}  const res = http.${api.method.toLowerCase()}(\`${fullUrl}\`, payload, params);\n`;
     }
 
@@ -938,6 +1208,14 @@ function generateApiCall(api, index, baseUrl, thinkTime, indent = '  ') {
             code += `${indent}    '${checkItem.name}': (r) => ${checkItem.condition}${idx < api.checks.length - 1 ? ',' : ''}\n`;
         });
         code += `${indent}  });\n`;
+    }
+
+    // Per-API think time: if global mode is per-api, sleep for this api's configured think time
+    if (thinkTime && thinkTime.mode === 'per-api') {
+        const tt = api.thinkTime || 0;
+        if (tt > 0) {
+            code += `${indent}  sleep(${tt});\n`;
+        }
     }
 
     code += `${indent}});\n${indent}\n`;
@@ -1001,7 +1279,7 @@ function loadExampleTemplate() {
     document.getElementById('apiList').innerHTML = '';
     apiCounter = 0;
 
-    document.getElementById('testName').value = "E-commerce API with Request Chaining";
+    document.getElementById('testName').value = "DemoAPI Test";
     document.getElementById('baseUrl').value = "${BASE_URL}";
     document.getElementById('vus').value = "20";
     document.getElementById('duration').value = "2m";
