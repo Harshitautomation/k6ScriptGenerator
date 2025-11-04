@@ -1,7 +1,7 @@
 /* Root Variables */
 :root {
-    --primary-color: #7d59c6;
-    --secondary-color: #5a3e9f;
+    --primary-color: #6f4ef3; /* brighter violet */
+    --secondary-color: #4b3bdb; /* deep indigo */
     --success-color: #28a745;
     --danger-color: #dc3545;
     --warning-color: #ffc107;
@@ -48,7 +48,7 @@ body {
 
 /* Header */
 header {
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    background: linear-gradient(135deg, rgba(111,78,243,0.95), rgba(75,59,219,0.95));
     color: white;
     padding: 1.5rem 2rem;
     box-shadow: var(--shadow-md);
@@ -59,6 +59,18 @@ header h1 {
     font-size: 1.8rem;
     margin-bottom: 0.3rem;
 }
+
+/* subtle floating animation for header title */
+header h1 { 
+    display:inline-block;
+    transform-origin: center;
+}
+@keyframes floatTitle {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+    100% { transform: translateY(0); }
+}
+header h1 { animation: floatTitle 6s ease-in-out infinite; }
 
 header p {
     font-size: 0.95rem;
@@ -95,6 +107,9 @@ header p {
     overflow: hidden;
 }
 
+/* smooth entrance for panels */
+.config-panel, .preview-panel { animation: fadeIn 0.45s ease both; }
+
 /* Config Panel */
 .config-panel {
     background: var(--bg-primary);
@@ -114,6 +129,10 @@ header p {
     box-shadow: var(--shadow-sm);
     overflow: hidden;
 }
+
+/* modern card hover lift */
+.api-item, .scenario-item, .stage-item { transition: transform 0.18s ease, box-shadow 0.18s ease; }
+.api-item:hover, .scenario-item:hover, .stage-item:hover { transform: translateY(-6px); box-shadow: 0 10px 30px rgba(75,59,219,0.12); }
 
 /* Collapsible Section Headers */
 .section-header {
@@ -138,6 +157,10 @@ header p {
     font-size: 0.9rem;
     transition: transform 0.3s;
 }
+
+/* rotate toggle icon when collapsed/expanded */
+.section-header[aria-expanded="true"] .toggle-icon { transform: rotate(0deg); }
+.section-header[aria-expanded="false"] .toggle-icon { transform: rotate(-90deg); }
 
 .section-content {
     padding: 1.5rem;
@@ -217,15 +240,15 @@ small {
 }
 
 .btn-primary {
-    background: var(--primary-color);
+    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
     color: white;
     width: 100%;
+    box-shadow: 0 6px 18px rgba(111,78,243,0.18);
 }
 
 .btn-primary:hover {
-    background: var(--secondary-color);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    transform: translateY(-3px) scale(1.01);
+    box-shadow: 0 12px 30px rgba(75,59,219,0.14);
 }
 
 .btn-success {
@@ -306,6 +329,10 @@ small {
     border-color: var(--primary-color);
 }
 
+/* small micro-interaction for profile buttons */
+.profile-btn { transition: transform 0.12s ease, box-shadow 0.12s; }
+.profile-btn:active { transform: translateY(1px) scale(0.995); }
+
 /* Environment Variables - NEW */
 .env-vars-list {
     margin-top: 0.5rem;
@@ -382,6 +409,9 @@ small {
     padding: 1.5rem;
     margin-top: 1rem;
 }
+
+/* subtle entry animation for new API items */
+.api-item { animation: slideDown 0.28s ease-out; }
 
 .api-item-header {
     display: flex;
@@ -480,6 +510,14 @@ small {
     display: flex;
     flex-direction: column;
 }
+
+.preview-header { position: relative; }
+.preview-panel { border-left: 1px solid rgba(111,78,243,0.06); }
+.code-editor { background: linear-gradient(180deg, #0f1724 0%, #071126 100%); }
+
+/* preview actions animation */
+.preview-actions .btn-icon { transition: transform 0.16s ease, box-shadow 0.16s; }
+.preview-actions .btn-icon:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(75,59,219,0.12); }
 
 .preview-header {
     display: flex;
@@ -584,3 +622,35 @@ small {
 .scenario-preview, .validation-error { animation: fadeIn 0.3s ease-out; }
 #scenariosConfig { transition: all 0.3s ease-out; }
 #scenariosConfig.hidden { max-height: 0; overflow: hidden; padding: 0; margin: 0; }
+
+/* Modal for cURL import */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.modal.hidden { display: none; }
+.modal-content {
+    background: var(--bg-primary);
+    padding: 1rem;
+    border-radius: 8px;
+    width: 560px;
+    box-shadow: var(--shadow-lg);
+}
+
+/* modal animate */
+.modal-content { transform: translateY(-8px); opacity: 0; animation: fadeIn 0.18s ease forwards 0.05s; }
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    header h1 { animation: none; }
+    .api-item, .scenario-item, .stage-item, .preview-panel, .config-panel { animation: none; transform: none !important; }
+    .modal-content { animation: none; }
+}
